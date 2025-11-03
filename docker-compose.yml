@@ -1,0 +1,255 @@
+# ==============================================================================
+# Docker Compose Configuration for Local Development
+# ==============================================================================
+# This file orchestrates all microservices and infrastructure components
+# for local development and testing.
+#
+# Usage:
+#   docker-compose up -d          # Start all services in background
+#   docker-compose logs -f auth   # Follow logs for auth service
+#   docker-compose down           # Stop and remove all containers
+#   docker-compose ps             # List running containers
+# ==============================================================================
+
+# ==============================================================================
+# Networks
+# ==============================================================================
+# Custom network for service communication
+networks:
+  ecommerce-network:
+    driver: bridge
+
+# ==============================================================================
+# Volumes
+# ==============================================================================
+# Persistent storage for databases
+volumes:
+  postgres-auth-data:
+  postgres-order-data:
+  postgres-report-data:
+  redis-data:
+  kafka-data:
+  zookeeper-data:
+
+# ==============================================================================
+# Services
+# ==============================================================================
+services:
+  
+  # ----------------------------------------------------------------------------
+  # PostgreSQL - Auth Database
+  # ----------------------------------------------------------------------------
+  postgres-auth:
+    image: postgres:16-alpine
+    container_name: postgres-auth
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-auth-data:/var/lib/postgresql/data
+    networks:
+      - ecommerce-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------------------------------
+  # PostgreSQL - Order Database
+  # ----------------------------------------------------------------------------
+  postgres-order:
+    image: postgres:16-alpine
+    container_name: postgres-order
+    environment:
+      POSTGRES_DB: order_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-order-data:/var/lib/postgresql/data
+    networks:
+      - ecommerce-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------------------------------
+  # PostgreSQL - Report Database
+  # ----------------------------------------------------------------------------
+  postgres-report:
+    image: postgres:16-alpine
+    container_name: postgres-report
+    environment:
+      POSTGRES_DB: report_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres-report-data:/var/lib/postgresql/data
+    networks:
+      - ecommerce-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------------------------------
+  # Redis (ElastiCache equivalent)
+  # ----------------------------------------------------------------------------
+  # Used for session management and caching
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - ecommerce-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ----------------------------------------------------------------------------
+  # Zookeeper (Required for Kafka)
+  # ----------------------------------------------------------------------------
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
+    networks:
+      - ecommerce-network
+
+  # ----------------------------------------------------------------------------
+  # Kafka (MSK equivalent)
+  # ----------------------------------------------------------------------------
+  # Message broker for event-driven architecture
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    networks:
+      - ecommerce-network
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  # ----------------------------------------------------------------------------
+  # Auth Service
+  # ----------------------------------------------------------------------------
+  auth-service:
+    build:
+      context: .
+      dockerfile: auth-service/Dockerfile
+    container_name: auth-service
+    depends_on:
+      - postgres-auth
+      - redis
+      - kafka
+    environment:
+      - DB_HOST=postgres-auth
+      - DB_PORT=5432
+      - DB_NAME=auth_db
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - PORT=8081
+    ports:
+      - "8081:8081"
+    networks:
+      - ecommerce-network
+    restart: unless-stopped
+
+  # ----------------------------------------------------------------------------
+  # Order Service
+  # ----------------------------------------------------------------------------
+  order-service:
+    build:
+      context: .
+      dockerfile: order-service/Dockerfile
+    container_name: order-service
+    depends_on:
+      - postgres-order
+      - redis
+      - kafka
+    environment:
+      - DB_HOST=postgres-order
+      - DB_PORT=5432
+      - DB_NAME=order_db
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - PORT=8082
+    ports:
+      - "8082:8082"
+    networks:
+      - ecommerce-network
+    restart: unless-stopped
+
+  # ----------------------------------------------------------------------------
+  # Report Service
+  # ----------------------------------------------------------------------------
+  report-service:
+    build:
+      context: .
+      dockerfile: report-service/Dockerfile
+    container_name: report-service
+    depends_on:
+      - postgres-report
+      - redis
+      - kafka
+    environment:
+      - DB_HOST=postgres-report
+      - DB_PORT=5432
+      - DB_NAME=report_db
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - PORT=8083
+    ports:
+      - "8083:8083"
+    networks:
+      - ecommerce-network
+    restart: unless-stopped
+
+
+

@@ -1,0 +1,152 @@
+# ==============================================================================
+# Auth Service Deployment and Service
+# ==============================================================================
+# Deploys Auth microservice with 3 replicas for high availability
+# ==============================================================================
+
+---
+# Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: ecommerce
+  labels:
+    app: auth-service
+    version: v1
+spec:
+  # 3 replicas for high availability and load distribution
+  replicas: 3
+  
+  # Rolling update strategy for zero-downtime deployments
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1        # Maximum number of pods above desired count
+      maxUnavailable: 1  # Maximum number of pods unavailable during update
+  
+  selector:
+    matchLabels:
+      app: auth-service
+  
+  template:
+    metadata:
+      labels:
+        app: auth-service
+        version: v1
+    spec:
+      # Service account for RBAC
+      serviceAccountName: default
+      
+      containers:
+      - name: auth-service
+        # Image from ECR (update with your registry)
+        image: <AWS_ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/auth-service:latest
+        imagePullPolicy: Always
+        
+        ports:
+        - containerPort: 8081
+          name: http
+          protocol: TCP
+        
+        # Environment variables from ConfigMap
+        envFrom:
+        - configMapRef:
+            name: auth-service-config
+        
+        # Environment variables from Secrets
+        env:
+        - name: DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: DB_USERNAME
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: DB_PASSWORD
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: jwt-secret
+              key: JWT_SECRET
+        
+        # Resource limits and requests
+        # Helps Kubernetes scheduler and prevents resource starvation
+        resources:
+          requests:
+            memory: "512Mi"   # Minimum memory required
+            cpu: "500m"       # 0.5 CPU cores
+          limits:
+            memory: "1Gi"     # Maximum memory allowed
+            cpu: "1000m"      # 1 CPU core
+        
+        # Liveness probe - restarts container if unhealthy
+        livenessProbe:
+          httpGet:
+            path: /api/v1/auth/health
+            port: 8081
+          initialDelaySeconds: 60  # Wait 60s after start before checking
+          periodSeconds: 10        # Check every 10s
+          timeoutSeconds: 5
+          failureThreshold: 3      # Restart after 3 failures
+        
+        # Readiness probe - removes from service if not ready
+        readinessProbe:
+          httpGet:
+            path: /api/v1/auth/health
+            port: 8081
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        # Startup probe - allows slow-starting containers
+        startupProbe:
+          httpGet:
+            path: /api/v1/auth/health
+            port: 8081
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 30  # Allow up to 5 minutes for startup
+      
+      # Pod anti-affinity for spreading across nodes
+      # Improves availability by avoiding single point of failure
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - auth-service
+              topologyKey: kubernetes.io/hostname
+
+---
+# Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: ecommerce
+  labels:
+    app: auth-service
+spec:
+  type: ClusterIP  # Internal service (use LoadBalancer/Ingress for external)
+  selector:
+    app: auth-service
+  ports:
+  - port: 80
+    targetPort: 8081
+    protocol: TCP
+    name: http
+  sessionAffinity: ClientIP  # Sticky sessions for better caching
+
+
+
+
+

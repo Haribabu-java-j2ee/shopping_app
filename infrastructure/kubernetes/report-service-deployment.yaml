@@ -1,0 +1,108 @@
+# ==============================================================================
+# Report Service Deployment and Service
+# ==============================================================================
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: report-service
+  namespace: ecommerce
+  labels:
+    app: report-service
+    version: v1
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: report-service
+  template:
+    metadata:
+      labels:
+        app: report-service
+        version: v1
+    spec:
+      containers:
+      - name: report-service
+        image: <AWS_ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/report-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8083
+          name: http
+        envFrom:
+        - configMapRef:
+            name: report-service-config
+        env:
+        - name: DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: DB_USERNAME
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: DB_PASSWORD
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /api/v1/reports/health
+            port: 8083
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/v1/reports/health
+            port: 8083
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        startupProbe:
+          httpGet:
+            path: /api/v1/reports/health
+            port: 8083
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 30
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - report-service
+              topologyKey: kubernetes.io/hostname
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: report-service
+  namespace: ecommerce
+spec:
+  type: ClusterIP
+  selector:
+    app: report-service
+  ports:
+  - port: 80
+    targetPort: 8083
+    name: http
+
+
+
+
+

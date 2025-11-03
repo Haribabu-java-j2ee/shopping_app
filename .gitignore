@@ -1,0 +1,89 @@
+# Compiled class file
+*.class
+
+# Log file
+*.log
+
+# BlueJ files
+*.ctxt
+
+# Mobile Tools for Java (J2ME)
+.mtj.tmp/
+
+# Package Files
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Gradle
+.gradle
+build/
+
+# IDE
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+.settings/
+.classpath
+.project
+.factorypath
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Spring Boot
+HELP.md
+spring-boot-starter-parent/
+
+# Logs
+logs/
+*.log
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+terraform.tfvars
+
+# Kubernetes
+kubeconfig
+
+# Docker
+*.env
+
+# Performance Test Results
+scripts/performance/results/
+scripts/performance/*.jtl
+scripts/performance/*.csv
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+
+# Application specific
+application-local.yml
+application-dev.yml
+
+
