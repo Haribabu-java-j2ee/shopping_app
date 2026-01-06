@@ -106,7 +106,33 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
      * @return true if exists
      */
     boolean existsByOrderNumber(String orderNumber);
+    
+    /**
+     * Fetches all orders with their items eagerly loaded.
+     * 
+     * <p>This method uses a JPQL JOIN FETCH to load order items in a single query,
+     * avoiding N+1 query problem when accessing items for customer statistics.
+     * 
+     * <p><b>Note:</b> This query returns all orders from the database. For large
+     * datasets, consider using pagination or filtering by date range.
+     * 
+     * @return List of all orders with items eagerly loaded
+     */
+    @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items")
+    List<Order> findAllWithItems();
+    
+    /**
+     * Finds all orders for a specific customer with items eagerly loaded.
+     * 
+     * @param customerId Customer ID
+     * @return List of orders for the customer with items
+     */
+    @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items WHERE o.customerId = :customerId")
+    List<Order> findByCustomerIdWithItems(@Param("customerId") Long customerId);
 }
+
+
+
 
 
 

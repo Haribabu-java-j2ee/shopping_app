@@ -12,7 +12,7 @@ metadata:
   name: auth-service-config
   namespace: ecommerce
 data:
-  DB_HOST: "postgres-auth-service.ecommerce.svc.cluster.local"
+  DB_HOST: "database-1.c814iowuqs2h.us-east-1.rds.amazonaws.com"
   DB_PORT: "5432"
   DB_NAME: "auth_db"
   REDIS_HOST: "redis-service.ecommerce.svc.cluster.local"
@@ -28,7 +28,7 @@ metadata:
   name: order-service-config
   namespace: ecommerce
 data:
-  DB_HOST: "postgres-order-service.ecommerce.svc.cluster.local"
+  DB_HOST: "database-1.c814iowuqs2h.us-east-1.rds.amazonaws.com"
   DB_PORT: "5432"
   DB_NAME: "order_db"
   REDIS_HOST: "redis-service.ecommerce.svc.cluster.local"
@@ -44,13 +44,16 @@ metadata:
   name: report-service-config
   namespace: ecommerce
 data:
-  DB_HOST: "postgres-report-service.ecommerce.svc.cluster.local"
+  DB_HOST: "database-1.c814iowuqs2h.us-east-1.rds.amazonaws.com"
   DB_PORT: "5432"
   DB_NAME: "report_db"
   REDIS_HOST: "redis-service.ecommerce.svc.cluster.local"
   REDIS_PORT: "6379"
   KAFKA_BOOTSTRAP_SERVERS: "kafka-service.ecommerce.svc.cluster.local:9092"
   PORT: "8083"
+
+
+
 
 
 

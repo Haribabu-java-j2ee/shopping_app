@@ -226,3 +226,6 @@ resource "aws_ecr_repository" "report_service" {
 
 
 
+
+
+

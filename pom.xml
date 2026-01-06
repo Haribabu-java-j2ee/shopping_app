@@ -39,7 +39,7 @@
         <!-- Database & Cache -->
         <postgresql.version>42.7.1</postgresql.version>
         <redis.version>3.2.0</redis.version>
-        <flyway.version>10.4.1</flyway.version>
+        <flyway.version>10.20.1</flyway.version>
         
         <!-- Testing -->
         <testcontainers.version>1.19.3</testcontainers.version>

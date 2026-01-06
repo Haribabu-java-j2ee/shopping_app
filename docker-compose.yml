@@ -40,14 +40,14 @@ services:
   # PostgreSQL - Auth Database
   # ----------------------------------------------------------------------------
   postgres-auth:
-    image: postgres:16-alpine
+    image: postgres:15-alpine
     container_name: postgres-auth
     environment:
       POSTGRES_DB: auth_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432"
+      - "5442:5432"
     volumes:
       - postgres-auth-data:/var/lib/postgresql/data
     networks:
@@ -62,7 +62,7 @@ services:
   # PostgreSQL - Order Database
   # ----------------------------------------------------------------------------
   postgres-order:
-    image: postgres:16-alpine
+    image: postgres:15-alpine
     container_name: postgres-order
     environment:
       POSTGRES_DB: order_db
@@ -84,7 +84,7 @@ services:
   # PostgreSQL - Report Database
   # ----------------------------------------------------------------------------
   postgres-report:
-    image: postgres:16-alpine
+    image: postgres:15-alpine
     container_name: postgres-report
     environment:
       POSTGRES_DB: report_db
